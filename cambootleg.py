@@ -121,6 +121,52 @@ def screw(points, offset, theta, iterations=64, axis='X'):
 
 	return screw_points_new, screw_norms_new
 
+# surface must fulfill these requirements:
+# neighboring vertices in the 2D array must be adjacent on the surface
+# each curve must be the same length (array-wise, not distance-wise)
+# 
+# the output curves + surface omit the first and last curve of the input- to hide any discontinuities
+def calc_norms(all_points):
+
+	size_l = len(all_points[0])
+	size_w = len(all_points)
+	all_norms = []
+
+	for i in range(0, size_w-1):
+		line_norms = []
+		for j in range(1, size_l-1):
+			cv = all_points[i][j]
+			pv = all_points[i][j-1]
+			nv = all_points[i+1][j]
+
+			l1 = (cv[0]-pv[0], cv[1]-pv[1], cv[2]-pv[2])
+			l2 = (nv[0]-pv[0], nv[1]-pv[1], nv[2]-pv[2])
+
+			n = normalize(cross(l1, l2))
+			line_norms.append(n)
+		all_norms.append(line_norms)
+
+	# step 3- average normals for each vertex to be in the final output
+
+	all_points_new = []
+	all_norms_new = []
+	for i in range(1, size_w-1):
+		line_points = []
+		line_norms = []
+		for j in range(1, size_l-2):
+			line_points.append(all_points[i][j])
+
+			n1 = all_norms[i][j]
+			n2 = all_norms[i][j-1]
+			n3 = all_norms[i-1][j-1]
+
+			na = mulvec(addvec(addvec(n1, n2), n3), 1/3)
+			line_norms.append(na)
+		all_norms_new.append(line_norms)
+		all_points_new.append(line_points)
+
+	return all_points_new, all_norms_new
+
 def print_point(point):
 	if len(point) == 3:
 		return "<{:.2f}, {:.2f}, {:.2f}>".format(point[0], point[1], point[2])
@@ -211,3 +257,31 @@ def make_obj_lines(lines):
 		vi += len(line)
 
 	return obj
+
+def distance(p1, p2):
+	return sqrt(sum([(e1-e2)**2 for e1, e2 in zip(p1, p2)]))
+
+# approximates dense path through removal of any very close-by vertices
+def cleanpath(path, tolerance=0.02):
+	newpath = []
+	prev = path[0]
+	prev_save = None
+	i = 1
+	while i < len(path):
+		pt = path[i]
+		d = distance(pt, prev)
+		while d <= tolerance and i < len(path)-1:
+			i += 1
+			pt = path[i]
+			d = distance(pt, prev)
+		if i == (len(path)-1) and d <= tolerance:
+			newpath.append(prev)
+			newpath.append(pt)
+		else:
+			newpath.append(prev)
+			newpath.append(path[i-1])
+			prev = pt
+			i += 1
+		i += 1
+	newpath.append(path[-1])
+	return newpath, len(path)-len(newpath)
