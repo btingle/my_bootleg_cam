@@ -147,7 +147,6 @@ def calc_norms(all_points):
 		all_norms.append(line_norms)
 
 	# step 3- average normals for each vertex to be in the final output
-
 	all_points_new = []
 	all_norms_new = []
 	for i in range(1, size_w-1):
@@ -166,6 +165,22 @@ def calc_norms(all_points):
 		all_points_new.append(line_points)
 
 	return all_points_new, all_norms_new
+
+# assumes has been prepared in similar fashion as matrix for calc_norms
+def make_mesh(all_points):
+	size_w = len(all_points)
+	size_l = len(all_points[0])
+
+
+	verts_flat = []
+	for l in all_points[1:-1]:
+		verts_flat.extend([p for p in l[1:-1]])
+	tris = [
+				((size_w*i + size_l*j), (size_w*i + size_l*j-1), (size_w*i-1 + size_l*j-1)),
+				((size_w*i-1 + size_l*j-1), (size_w*i-1, size_l*j), (size_w*i, size_l*j))
+	]
+
+
 
 def print_point(point):
 	if len(point) == 3:
