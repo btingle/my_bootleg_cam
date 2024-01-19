@@ -122,7 +122,7 @@ def screw(points, offset, theta, iterations=64, axis='X'):
 	return screw_points_new, screw_norms_new
 
 # surface must fulfill these requirements:
-# neighboring vertices in the 2D array must be adjacent on the surface
+# neighboring vertices in the matrix should be adjacent on the surface grid
 # each curve must be the same length (array-wise, not distance-wise)
 # 
 # the output curves + surface omit the first and last curve of the input- to hide any discontinuities
@@ -166,20 +166,32 @@ def calc_norms(all_points):
 
 	return all_points_new, all_norms_new
 
-# assumes has been prepared in similar fashion as matrix for calc_norms
-def make_mesh(all_points):
+# designed to work for output of calc_norms- i.e well-defined vertices that make up the whole of a surface
+def make_mesh(all_points, all_norms=None):
 	size_w = len(all_points)
 	size_l = len(all_points[0])
 
-
+	all_faces = []
 	verts_flat = []
-	for l in all_points[1:-1]:
-		verts_flat.extend([p for p in l[1:-1]])
-	tris = [
-				((size_w*i + size_l*j), (size_w*i + size_l*j-1), (size_w*i-1 + size_l*j-1)),
-				((size_w*i-1 + size_l*j-1), (size_w*i-1, size_l*j), (size_w*i, size_l*j))
-	]
+	i = 1
+	for l in all_points:
+		verts_flat.extend([p for p in l[:]])
+		tris = [
+					((size_l*i + j-1), (size_l*i + j), (size_l*(i-1) + j), (size_l*(i-1) + j-1)) for j in range(2, size_l+1)
+		]
+		tris.append(((i*size_l + size_l), (i*size_l+1), ((i-1)*size_l+1), ((i-1)*size_l + size_l)))
+		all_faces.extend(tris)
+		i += 1
 
+	print(len(all_faces), len(verts_flat), size_w, size_l)
+	
+	text = ""
+	for point in verts_flat:
+		text += "v {:.2f} {:.2f} {:.2f}\n".format(point[0], point[1], point[2])
+	for tri in all_faces:
+		text += "f {} {} {} {}\n".format(tri[0], tri[1], tri[2], tri[3])
+
+	return text
 
 
 def print_point(point):
@@ -237,7 +249,7 @@ def append_paths(paths):
 	for i in range(0, len(paths), 2):
 		patho.extend(paths[i])
 		if (i+1) < len(paths):
-			patho.extend(loop_skin[i+1])
+			patho.extend(paths[i+1])
 	return patho
 
 def square_skin(points, norms, radius):
@@ -278,9 +290,9 @@ def distance(p1, p2):
 
 # approximates dense path through removal of any very close-by vertices
 def cleanpath(path, tolerance=0.02):
-	newpath = []
+	newpath = [path[0]]
 	prev = path[0]
-	prev_save = None
+	prev_i = 0
 	i = 1
 	while i < len(path):
 		pt = path[i]
@@ -290,13 +302,9 @@ def cleanpath(path, tolerance=0.02):
 			pt = path[i]
 			d = distance(pt, prev)
 		if i == (len(path)-1) and d <= tolerance:
-			newpath.append(prev)
 			newpath.append(pt)
 		else:
-			newpath.append(prev)
-			newpath.append(path[i-1])
+			newpath.append(pt)
 			prev = pt
-			i += 1
 		i += 1
-	newpath.append(path[-1])
 	return newpath, len(path)-len(newpath)
