@@ -21,6 +21,19 @@ def rotate_z(p, theta):
 		p[2]
 	)
 
+# axis should be normalized, pls
+def rotate_axis(p, axis, theta):
+	cost = cos(theta)
+	sint = sin(theta)
+	uxy = axis[0]*axis[1]
+	uxz = axis[0]*axis[2]
+	uyz = axis[1]*axis[2]
+	x = (p[0] * (cost + axis[0]**2*(1-cost))  + p[1] * (uxy*(1-cost) - axis[2]*sint) + p[2] * (uxz*(1-cost) + axis[1]*sint))
+	y = (p[0] * (uyx*(1-cost) + axis[2]*sint) + p[1] * (cost + axis[1]**2*(1-cost))  + p[2] * (uyz*(1-cost) - axis[0]*sint))
+	z = (p[0] * (uxz*(1-cost) - axis[1]*sint) + p[1] * (uyz*(1-cost) + axis[0]*sint) + p[2] * (cost + axis[2]**2*(1-cost)) )
+	return (x, y, z)
+	
+
 def cross(a, b):
 	return a[1]*b[2]-a[2]*b[1], a[0]*b[2]-a[2]*b[0], a[0]*b[1]-a[1]*b[0]
 
@@ -50,6 +63,12 @@ def screw(points, offset, theta, iterations=64, axis='X'):
 	d_x = offset / iterations
 	screw_points = []
 	screw_norms = []
+
+	# roughing algorithm-
+	# need to know geometry of workpiece and where it lies relative to the piece (for now we will assume rect prism, centered on origin)
+	# need to figure out which areas are "inside" piece, and which are "outside"
+	# algorithms I know break the piece into Z-levels, extract contours, and generate roughing from those contours
+	# how to break into Z-levels?
 
 	# redoing normals- do it right
 	# rules: 
@@ -173,9 +192,12 @@ def make_mesh(all_points, all_norms=None):
 
 	all_faces = []
 	verts_flat = []
+	norms_flat = []
 	i = 1
-	for l in all_points:
-		verts_flat.extend([p for p in l[:]])
+	for k in range(len(all_points)):
+		verts_flat.extend(all_points[k])
+		if all_norms:
+			norms_flat.extend(all_norms[k])
 		tris = [
 					((size_l*i + j-1), (size_l*i + j), (size_l*(i-1) + j), (size_l*(i-1) + j-1)) for j in range(2, size_l+1)
 		]
@@ -188,11 +210,45 @@ def make_mesh(all_points, all_norms=None):
 	text = ""
 	for point in verts_flat:
 		text += "v {:.2f} {:.2f} {:.2f}\n".format(point[0], point[1], point[2])
+	for norm in norms_flat:
+		text += "vn {:.2f} {:.2f} {:.2f}\n".format(norm[0], norm[1], norm[2])
 	for tri in all_faces:
 		text += "f {} {} {} {}\n".format(tri[0], tri[1], tri[2], tri[3])
 
 	return text
 
+def load_mesh(fn):
+	verts = []
+	norms = []
+	tris = []
+	with open(fn, 'r') as f:
+		for line in f:
+			tok = line.strip().split()
+			if tok[0] == 'v':
+				verts.append((float(tok[1]), float(tok[2]), float(tok[3])))
+			if tok[0] == 'vn':
+				norms.append((float(tok[1]), float(tok[2]), float(tok[3])))
+			if tok[0] == 'f':
+				tok[1:] = [t.split('//')[0] for t in tok[1:]]
+				if len(tok) > 4:
+					tris.append((int(tok[1])-1, int(tok[2])-1, int(tok[3])-1, int(tok[4])-1))
+				else:
+					tris.append((int(tok[1])-1, int(tok[2])-1, int(tok[3])-1))
+	return verts, norms, tris
+
+def save_mesh(fn, verts, norms, tris):
+	facemode = 'tri' if len(tris[0]) == 3 else 'quad' if len(tris[0]) == 4 else None
+	with open(fn, 'w') as f:
+		for vert in verts:
+			f.write("v {:.2f} {:.2f} {:.2f}\n".format(vert[0], vert[1], vert[2]))
+		for norm in norms:
+			f.write("vn {:.2f} {:.2f} {:.2f}\n".format(norm[0], norm[1], norm[2]))
+		if facemode == 'tri':
+			for tri in tris:
+				f.write("f {} {} {}\n".format(tri[0], tri[1], tri[2]))
+		elif facemode == 'quad':
+			for tri in tris:
+				f.write("f {} {} {} {}\n".format(tri[0], tri[1], tri[2], tri[3]))
 
 def print_point(point):
 	if len(point) == 3:
@@ -231,6 +287,21 @@ def bullnose_skin(points, norms, radius):
 		dz = norm[2] * radius
 
 		skin.append((point[0]+dx, point[1]+dy, point[2]+dz))
+
+	return skin
+
+# I'm only going to consider ballnose tool- any other tool makes little sense for 4axis detailing
+# returns vec3s- with y coordinate replaced by angle
+def bullnose_skin_4axis(points, norms, radius):
+	skin = []
+
+	for norm, point in zip(norms, points):
+		p = addvec(mulvec(norm, radius), point)
+		theta = -atan2(p[2], p[1])
+		p1  = rotate_x(p, theta)
+		p0 = rotate_x(point,  theta)
+		n  = subvec(p1, p0)
+		skin.append( ( p1[0], (n[1] - 1) * radius + p0[1], theta ) )
 
 	return skin
 
@@ -276,6 +347,12 @@ def make_obj_lines(lines):
 
 			obj += "v {:.2f} {:.2f} {:.2f}\n".format(point[0], point[1], point[2])
 
+		#for point in line[:-1]:
+
+		#	obj += "f {} {}\n".format(vi, vi+1)
+		#	vi += 1
+
+		#vi += 1
 		batchsize = 500
 		for s in range((len(line)//batchsize)+1):
 			end = (s*batchsize + batchsize + 1) if (s*batchsize + batchsize) < len(line) else len(line)+1
@@ -308,3 +385,9 @@ def cleanpath(path, tolerance=0.02):
 			prev = pt
 		i += 1
 	return newpath, len(path)-len(newpath)
+
+if __name__ == "__main__":
+	pts = [(0, 1, 0), (0, 0, 1)]
+	nrm = [(0, 0, 1), (0, 1, 0)]
+	skin = bullnose_skin_4axis(pts, nrm, 1)
+	print(skin)
