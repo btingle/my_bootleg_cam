@@ -35,7 +35,7 @@ def rotate_axis(p, axis, theta):
 	
 
 def cross(a, b):
-	return a[1]*b[2]-a[2]*b[1], a[0]*b[2]-a[2]*b[0], a[0]*b[1]-a[1]*b[0]
+	return a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]
 
 def normalize(v):
 	mag = sqrt(v[0]**2+v[1]**2+v[2]**2)
@@ -152,8 +152,8 @@ def calc_norms(all_points):
 	all_norms = []
 
 	for i in range(0, size_w-1):
-		line_norms = []
-		for j in range(1, size_l-1):
+		line_norms = [None]
+		for j in range(1, size_l):
 			cv = all_points[i][j]
 			pv = all_points[i][j-1]
 			nv = all_points[i+1][j]
@@ -164,6 +164,7 @@ def calc_norms(all_points):
 			n = normalize(cross(l1, l2))
 			line_norms.append(n)
 		all_norms.append(line_norms)
+	all_norms.append(None)
 
 	# step 3- average normals for each vertex to be in the final output
 	all_points_new = []
@@ -171,12 +172,12 @@ def calc_norms(all_points):
 	for i in range(1, size_w-1):
 		line_points = []
 		line_norms = []
-		for j in range(1, size_l-2):
+		for j in range(1, size_l-1):
 			line_points.append(all_points[i][j])
 
-			n1 = all_norms[i][j]
-			n2 = all_norms[i][j-1]
-			n3 = all_norms[i-1][j-1]
+			n1 = all_norms[i][j] # cv
+			n2 = all_norms[i][j+1]
+			n3 = all_norms[i-1][j+1]
 
 			na = mulvec(addvec(addvec(n1, n2), n3), 1/3)
 			line_norms.append(na)
@@ -270,6 +271,19 @@ def debug_skin(points, norms, radius):
 		skin.append((point[0]+dx, point[1]+dy, point[2]+dz))
 
 	return skin
+
+def debug_norms(points, norms, radius=1):
+	spikes = []
+
+	for norm, point in zip(norms, points):
+
+		dx = norm[0] * radius
+		dy = norm[1] * radius
+		dz = norm[2] * radius
+
+		spikes.append([point, (point[0]+dx, point[1]+dy, point[2]+dz)])
+
+	return make_obj_lines(spikes)
 # y is "up" for these purposes
 def bullnose_skin(points, norms, radius):
 	skin = []
