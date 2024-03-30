@@ -32,6 +32,10 @@ def rotate_axis(p, axis, theta):
 	y = (p[0] * (uyx*(1-cost) + axis[2]*sint) + p[1] * (cost + axis[1]**2*(1-cost))  + p[2] * (uyz*(1-cost) - axis[0]*sint))
 	z = (p[0] * (uxz*(1-cost) - axis[1]*sint) + p[1] * (uyz*(1-cost) + axis[0]*sint) + p[2] * (cost + axis[2]**2*(1-cost)) )
 	return (x, y, z)
+
+def mirrorX(p, pivot):
+	d = p[0]-pivot
+	return (pivot-d, p[1], p[2])
 	
 
 def cross(a, b):
@@ -250,6 +254,36 @@ def save_mesh(fn, verts, norms, tris):
 		elif facemode == 'quad':
 			for tri in tris:
 				f.write("f {} {} {} {}\n".format(tri[0], tri[1], tri[2], tri[3]))
+
+# expects 2d points that define a profile
+def profile_cut_spiral_down(profile, depth, cutdepth):
+	dists = [0]
+	dist = 0
+	prev = profile[0]
+	for p in profile[1:]:
+		dx = subvec(p, prev)
+		dd = sqrt((dx[0]**2 + dx[1]**2))
+		dists.append(dd)
+		dist += dd
+		prev = p
+
+	path = [(profile[0][0], profile[0][1], 0)]
+	z = 0
+	c = 1
+
+	while z < depth:
+		p = profile[c]
+		z += (dists[c] / dist) * cutdepth
+		z  = min(z, depth)
+		path.append((p[0], p[1], z))
+		c = (c + 1) % len(profile)
+
+	while c < len(profile):
+		p = profile[c]
+		path.append((p[0], p[1], depth))
+		c += 1
+
+	return path
 
 def print_point(point):
 	if len(point) == 3:
