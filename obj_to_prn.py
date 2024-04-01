@@ -1,4 +1,7 @@
 from math import *
+# object to porn dot python
+# turns any object- conceptual or otherwise- into internet pornography!
+# all in a mere 20 lines of code!
 
 import sys, os
 
