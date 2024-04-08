@@ -1,8 +1,3 @@
-from math import *
-# object to porn dot python
-# turns any object- conceptual or otherwise- into internet pornography!
-# all in a mere 20 lines of code!
-
 import sys, os
 
 obj_file = sys.argv[1]
@@ -16,6 +11,16 @@ clearance_height = 10
 # done very jank- we ignore the line data and assume all vertices are already ordered
 # this happens to be the case when converting a long line to a curve prior to export in blender
 # so big stretches of "l" lines will be treated as a delimiter between paths, and nothing else
+
+with open(prn_file) as src, open(obj_file, 'w') as dest:
+
+    for line in src:
+
+        if line.startswith('Z'):
+            v = [int(t) for t in line[1:-1]]
+
+        elif line.startswith('V'):
+            pass
 
 with open(obj_file) as src, open(prn_file, 'w') as dest:
 
