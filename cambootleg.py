@@ -275,15 +275,48 @@ def profile_cut_spiral_down(profile, depth, cutdepth):
 		p = profile[c]
 		z += (dists[c] / dist) * cutdepth
 		z  = min(z, depth)
-		path.append((p[0], p[1], z))
+		path.append((p[0], p[1], -z))
 		c = (c + 1) % len(profile)
 
 	while c < len(profile):
 		p = profile[c]
-		path.append((p[0], p[1], depth))
+		path.append((p[0], p[1], -depth))
 		c += 1
 
 	return path
+
+def profile_cut_box(w, h, depth, doc, toolradius):
+	box = [(-w/2-toolradius, -h/2-toolradius), (w/2+toolradius, -h/2-toolradius), (w/2+toolradius, h/2+toolradius), (-w/2-toolradius, h/2+toolradius)]
+	return make_obj_lines([profile_cut_spiral_down(box, depth, doc)])
+
+def beveled_box(w, h, r, depth, doc, toolradius, it=32):
+	radius_base = []
+	dt = (pi/2)/it
+	for i in range(it+1):
+		t = dt*i
+		radius_base.append((cos(t)*(r+toolradius), sin(t)*(r+toolradius)))
+	box = []
+	box.extend([( x+(w/2)-r,  y+(h/2)-r) for x, y in radius_base])
+	box.extend(reversed([(-x-(w/2)+r,  y+(h/2)-r) for x, y in radius_base]))
+	box.extend([(-x-(w/2)+r, -y-(h/2)+r) for x, y in radius_base])
+	box.extend(reversed([( x+(w/2)-r, -y-(h/2)+r) for x, y in radius_base]))
+	return make_obj_lines([profile_cut_spiral_down(box, depth, doc)])
+
+def boreholes(points, radius, toolradius, depth, cutdepth, it=64):
+	hole = []
+	dt = (2*pi)/it
+	for i in range(it+1):
+		t = dt*i
+		hole.append((cos(t)*(radius-toolradius), sin(t)*(radius-toolradius)))
+	holes = []
+	for point in points:
+		thishole = [(x+point[0], y+point[1]) for x, y in hole]
+		holes.append(profile_cut_spiral_down(thishole, depth, cutdepth))
+	return make_obj_lines(holes)
+
+# same as boreholes, but pointing out instead of in!
+def carvepegs(points, radius, toolradius, depth, cutdepth, it=64):
+	return boreholes(points, radius, -toolradius, depth, cutdepth, it=it)
 
 def print_point(point):
 	if len(point) == 3:
