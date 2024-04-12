@@ -191,7 +191,7 @@ def calc_norms(all_points):
 	return all_points_new, all_norms_new
 
 # designed to work for output of calc_norms- i.e well-defined vertices that make up the whole of a surface
-def make_mesh(all_points, all_norms=None):
+def make_mesh(all_points, all_norms=None, closed=True):
 	size_w = len(all_points)
 	size_l = len(all_points[0])
 
@@ -199,14 +199,15 @@ def make_mesh(all_points, all_norms=None):
 	verts_flat = []
 	norms_flat = []
 	i = 1
-	for k in range(len(all_points)):
+	for k in range(size_w):
 		verts_flat.extend(all_points[k])
 		if all_norms:
 			norms_flat.extend(all_norms[k])
 		tris = [
 					((size_l*i + j-1), (size_l*i + j), (size_l*(i-1) + j), (size_l*(i-1) + j-1)) for j in range(2, size_l+1)
 		]
-		tris.append(((i*size_l + size_l), (i*size_l+1), ((i-1)*size_l+1), ((i-1)*size_l + size_l)))
+		if closed:
+			tris.append(((i*size_l + size_l), (i*size_l+1), ((i-1)*size_l+1), ((i-1)*size_l + size_l)))
 		all_faces.extend(tris)
 		i += 1
 
