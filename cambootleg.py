@@ -315,6 +315,49 @@ def boreholes(points, radius, toolradius, depth, cutdepth, it=64):
 		holes.append(profile_cut_spiral_down(thishole, depth, cutdepth))
 	return make_obj_lines(holes)
 
+# "point" is assumed to be the top of the sphere
+def interpsphere(point, radius, workradius, toolradius, doc, it=64, just_finish=False):
+	# first rough
+	def spiralin(point, od, id, doc, it=64):
+		# how many rotary iterations until spiral reaches center
+		p_iterations = int((od - id) // doc)
+		#p_iterations = 0
+		for i in range(p_iterations):
+			for j in range(it):
+				t = (j/it)*2*pi
+				r = od - ((((i*it)+j)/(p_iterations*it)) * (od - id))
+				yield cos(t)*r + point[0], sin(t)*r + point[1], point[2]
+		for j in range(it+1):
+			t = (j/it)*2*pi
+			r = id
+			yield (cos(t)*r + point[0], sin(t)*r + point[1], point[2])
+
+	# rough pass assumes a square mill
+	paths = []
+	cv = [point[0], point[1], point[2]]
+	p_iterations = int(radius // doc)
+	for i in range(1, p_iterations):
+		path = []
+		t = acos(1 - (i/p_iterations))
+		#t = (i/p_iterations)*(pi/2)
+		cv[2] = -(i/p_iterations)*radius
+		r = sin(t)*radius
+		#print(r, t, i, cv)
+		od = workradius + toolradius
+		id = r + toolradius
+		thisdoc = doc
+		if just_finish:
+			od = id
+		path.extend(spiralin(cv, od, id, thisdoc))
+		paths.append(path)
+	cv[2] = -radius
+	path = []
+	path.extend(spiralin(cv, workradius+toolradius, radius+toolradius, doc))
+	paths.append(path)
+
+	# finish pass! todo...
+	return make_obj_lines(paths)
+
 # same as boreholes, but pointing out instead of in!
 def carvepegs(points, radius, toolradius, depth, cutdepth, it=64):
 	return boreholes(points, radius, -toolradius, depth, cutdepth, it=it)
