@@ -191,9 +191,10 @@ def calc_norms(all_points):
 	return all_points_new, all_norms_new
 
 # designed to work for output of calc_norms- i.e well-defined vertices that make up the whole of a surface
-def make_mesh(all_points, all_norms=None, closed=True):
+def make_mesh(all_points, all_norms=None, closed=True, closed_contour=False):
 	size_w = len(all_points)
 	size_l = len(all_points[0])
+	#print(size_w, size_l)
 
 	all_faces = []
 	verts_flat = []
@@ -204,20 +205,24 @@ def make_mesh(all_points, all_norms=None, closed=True):
 		if all_norms:
 			norms_flat.extend(all_norms[k])
 		tris = [
-					((size_l*i + j-1), (size_l*i + j), (size_l*(i-1) + j), (size_l*(i-1) + j-1)) for j in range(2, size_l+1)
+			((size_l*i + j-1), (size_l*i + j), (size_l*(i-1) + j), (size_l*(i-1) + j-1)) for j in range(2, size_l+1)
 		]
 		if closed:
 			tris.append(((i*size_l + size_l), (i*size_l+1), ((i-1)*size_l+1), ((i-1)*size_l + size_l)))
 		all_faces.extend(tris)
 		i += 1
-
+	if closed_contour:
+		tris = [
+			(j-1, j, (size_l*(size_w-1) + j), (size_l*(size_w-1) + j-1)) for j in range(2, size_l+1)
+		]
+		all_faces.extend(tris)
 	print(len(all_faces), len(verts_flat), size_w, size_l)
 	
 	text = ""
 	for point in verts_flat:
-		text += "v {:.2f} {:.2f} {:.2f}\n".format(point[0], point[1], point[2])
+		text += "v {:.3f} {:.3f} {:.3f}\n".format(point[0], point[1], point[2])
 	for norm in norms_flat:
-		text += "vn {:.2f} {:.2f} {:.2f}\n".format(norm[0], norm[1], norm[2])
+		text += "vn {:.3f} {:.3f} {:.3f}\n".format(norm[0], norm[1], norm[2])
 	for tri in all_faces:
 		text += "f {} {} {} {}\n".format(tri[0], tri[1], tri[2], tri[3])
 
