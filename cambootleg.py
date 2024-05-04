@@ -199,7 +199,7 @@ def make_mesh(all_points, all_norms=None, closed=True):
 	verts_flat = []
 	norms_flat = []
 	i = 1
-	for k in range(len(all_points)):
+	for k in range(size_w):
 		verts_flat.extend(all_points[k])
 		if all_norms:
 			norms_flat.extend(all_norms[k])
