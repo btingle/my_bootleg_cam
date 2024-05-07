@@ -399,9 +399,11 @@ def debug_norms(points, norms, radius=1):
 
 		spikes.append([point, (point[0]+dx, point[1]+dy, point[2]+dz)])
 
+	#print(spikes[0:10])
+
 	return make_obj_lines(spikes)
 # y is "up" for these purposes
-def bullnose_skin(points, norms, radius):
+def bullnose_skin(points, norms, radius, up='y'):
 	skin = []
 
 	for norm, point in zip(norms, points):
@@ -413,8 +415,16 @@ def bullnose_skin(points, norms, radius):
 		# dy = 0 if ny = 1
 
 		dx = norm[0] * radius
-		dy = (norm[1] - 1) * radius
+		dy = norm[1] * radius
 		dz = norm[2] * radius
+		if up == 'z':
+			dz -= radius
+		elif up == 'y':
+			dy -= radius
+		elif up == 'x':
+			dx -= radius
+		else:
+			raise NameError('figure it out')
 
 		skin.append((point[0]+dx, point[1]+dy, point[2]+dz))
 
@@ -422,6 +432,7 @@ def bullnose_skin(points, norms, radius):
 
 # I'm only going to consider ballnose tool- any other tool makes little sense for 4axis detailing
 # returns vec3s- with y coordinate replaced by angle
+# should be "ballnose_skin", but i fucked up the name so its stuck (for now)
 def bullnose_skin_4axis(points, norms, radius):
 	skin = []
 
@@ -441,7 +452,7 @@ def zigzag_paths(paths):
 	for i in range(0, len(paths), 2):
 		patho.extend(paths[i])
 		if (i+1) < len(paths):
-			patho.extend(reversed(loop_skin[i+1]))
+			patho.extend(reversed(paths[i+1]))
 	return patho
 
 def append_paths(paths):
