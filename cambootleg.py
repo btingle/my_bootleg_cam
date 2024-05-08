@@ -1,4 +1,6 @@
 from math import *
+from obj_to_prn import obj_to_prn
+import os, sys
 
 def rotate_x(p, theta):
 	return (
@@ -261,6 +263,26 @@ def save_mesh(fn, verts, norms, tris):
 			for tri in tris:
 				f.write("f {} {} {} {}\n".format(tri[0], tri[1], tri[2], tri[3]))
 
+# assumes a file name, or relative path- not an absolute path
+#def redirect_to_resources(fn):
+	#if os.path.dirname(os.getcwd()) != 'resources':
+		#if not os.path.exists('resources'):
+
+def savefile(d, fn):
+	with open(fn, 'w') as f:
+		f.write(d)
+
+def saveprn(d, fn_base):
+	with open(fn_base + '.prn.obj', 'w') as of:
+		of.write(d)
+		obj_to_prn(d, fn_base + '.prn')
+
+def saveprnmodel(dp, dm, fn_base):
+	with open(fn_base + '.prn.obj', 'w') as of, open(fn_base + '.obj', 'w') as mf:
+		of.write(dp)
+		obj_to_prn(dp, fn_base + '.prn')
+		mf.write(dm)
+
 # expects 2d points that define a profile
 def profile_cut_spiral_down(profile, depth, cutdepth):
 	dists = [0]
@@ -284,10 +306,12 @@ def profile_cut_spiral_down(profile, depth, cutdepth):
 		path.append((p[0], p[1], -z))
 		c = (c + 1) % len(profile)
 
-	while c < len(profile):
+	c0 = c
+	c = (c + 1) % len(profile)
+	while c != c0:
 		p = profile[c]
 		path.append((p[0], p[1], -depth))
-		c += 1
+		c = (c + 1) % len(profile)
 
 	return path
 
