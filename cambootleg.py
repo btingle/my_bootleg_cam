@@ -31,7 +31,7 @@ def rotate_axis(p, axis, theta):
 	uxz = axis[0]*axis[2]
 	uyz = axis[1]*axis[2]
 	x = (p[0] * (cost + axis[0]**2*(1-cost))  + p[1] * (uxy*(1-cost) - axis[2]*sint) + p[2] * (uxz*(1-cost) + axis[1]*sint))
-	y = (p[0] * (uyx*(1-cost) + axis[2]*sint) + p[1] * (cost + axis[1]**2*(1-cost))  + p[2] * (uyz*(1-cost) - axis[0]*sint))
+	y = (p[0] * (uxy*(1-cost) + axis[2]*sint) + p[1] * (cost + axis[1]**2*(1-cost))  + p[2] * (uyz*(1-cost) - axis[0]*sint))
 	z = (p[0] * (uxz*(1-cost) - axis[1]*sint) + p[1] * (uyz*(1-cost) + axis[0]*sint) + p[2] * (cost + axis[2]**2*(1-cost)) )
 	return (x, y, z)
 
@@ -510,7 +510,7 @@ def make_obj_lines(lines):
 	for line in lines:
 		for point in line:
 
-			obj += "v {:.2f} {:.2f} {:.2f}\n".format(point[0], point[1], point[2])
+			obj += "v {:.3f} {:.3f} {:.3f}\n".format(point[0], point[1], point[2])
 
 		#for point in line[:-1]:
 
